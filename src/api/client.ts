@@ -1,4 +1,4 @@
-export const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:3001/api').replace(/\/$/, '')
+export const API_BASE = (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '')
 
 /** 拼接为 BASE + '/' + path，避免 new URL 覆盖掉 BASE 的路径 */
 function buildUrl(path: string, params?: Record<string, string | number>) {
