@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FloatingChat from './components/FloatingChat.vue'
 </script>
 
 <template>
@@ -16,6 +17,7 @@
   <main class="container">
     <RouterView />
   </main>
+  <FloatingChat />
 </template>
 
 <style scoped>
