@@ -32,3 +32,5 @@ backend/prisma/migrations/*
 
 # Ignore CodeBuddy artifacts
 .codebuddy/
+
+.codebuddy/
