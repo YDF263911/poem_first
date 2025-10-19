@@ -1,0 +1,150 @@
+{
+  "name": "Poem Chat Assistant (Azure OpenAI)",
+  "nodes": [
+    {
+      "id": "Webhook_Entry",
+      "name": "Webhook (POST/OPTIONS)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "path": "poem-chat",
+        "responseMode": "onReceived",
+        "options": {
+          "allowUnauthorizedCertificates": false
+        }
+      }
+    },
+    {
+      "id": "IF_Options",
+      "name": "Is OPTIONS?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 180],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$method}}",
+              "operation": "equals",
+              "value2": "OPTIONS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Respond_Options",
+      "name": "Respond CORS (OPTIONS)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 120],
+      "parameters": {
+        "responseCode": 200,
+        "responseData": "",
+        "responseHeaders": {
+          "entries": [
+            { "name": "Access-Control-Allow-Origin", "value": "https://ydffirst.netlify.app" },
+            { "name": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
+            { "name": "Access-Control-Allow-Headers", "value": "content-type,authorization,apikey" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "HTTP_AzureOpenAI",
+      "name": "HTTP Request (Azure Chat)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, 300],
+      "parameters": {
+        "url": "=https://YOUR_RESOURCE_NAME.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_NAME/chat/completions?api-version=2024-06-01",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "api-key", "value": "YOUR_AZURE_OPENAI_KEY" }
+          ]
+        },
+        "bodyParametersJson": "={\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"你是古诗词助手。要求：\\n- 用简体中文回答\\n- 内容贴合诗词主题，尽量提供出处/作者（如果明确）\\n- 可做意境赏析、风格对比、名句解析\\n- 避免编造不存在的诗句，不确定则说明不确定\\n- 输出简洁清晰\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{$json.message}}\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 512\n}"
+      }
+    },
+    {
+      "id": "Extract_Reply",
+      "name": "Extract Reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "reply",
+              "value": "={{$json[\"choices\"][0][\"message\"][\"content\"] || $json.data || \"（未得到回复，请检查 Azure OpenAI 输出）\"}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Respond_Main",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1180, 300],
+      "parameters": {
+        "responseCode": 200,
+        "responseData": "={{$json}}",
+        "responseHeaders": {
+          "entries": [
+            { "name": "Access-Control-Allow-Origin", "value": "https://ydffirst.netlify.app" },
+            { "name": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
+            { "name": "Access-Control-Allow-Headers", "value": "content-type,authorization,apikey" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (POST/OPTIONS)": {
+      "main": [
+        [
+          { "node": "Is OPTIONS?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Is OPTIONS?": {
+      "main": [
+        [
+          { "node": "Respond CORS (OPTIONS)", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "HTTP Request (Azure Chat)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP Request (Azure Chat)": {
+      "main": [
+        [
+          { "node": "Extract Reply", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Reply": {
+      "main": [
+        [
+          { "node": "Respond to Webhook", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "version": 2,
+  "meta": { "instanceId": "poem-chat-assistant-azure" },
+  "settings": {},
+  "staticData": {}
+}
