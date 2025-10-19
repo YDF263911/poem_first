@@ -34,3 +34,5 @@ backend/prisma/migrations/*
 .codebuddy/
 
 .codebuddy/
+
+!.env.example
