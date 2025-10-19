@@ -11,8 +11,11 @@ onMounted(async () => {
   }
 })
 
-// 精选前 6 条诗词
-const featured = computed(() => store.poems.slice(0, 6))
+/**
+ * 精选诗词：来自 store 中锁定的 featuredIds，
+ * 首次加载后固定不变（持久化 localStorage）。
+ */
+const featured = computed(() => store.featuredPoems)
 </script>
 
 <template>
@@ -59,7 +62,7 @@ const featured = computed(() => store.poems.slice(0, 6))
     </div>
 
     <!-- 空态 -->
-    <div v-if="!featured.length" class="empty card">
+    <div v-if="!featured.length && !store.loading" class="empty card">
       暂无数据，请稍后重试。
     </div>
   </section>

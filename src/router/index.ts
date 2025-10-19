@@ -6,11 +6,13 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '../views/AboutView.vue'
 import PoemsList from '../views/PoemsList.vue'
 import PoemDetail from '../views/PoemDetail.vue'
+import FavoritesView from '../views/FavoritesView.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/about', name: 'about', component: AboutView },
   { path: '/poems', name: 'poems', component: PoemsList },
+  { path: '/favorites', name: 'favorites', component: FavoritesView },
   { path: '/poems/:id', name: 'poem-detail', component: PoemDetail },
 ]
 

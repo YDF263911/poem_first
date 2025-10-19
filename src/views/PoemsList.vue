@@ -75,6 +75,9 @@ function samplePoem(catKey: string) {
                 <small class="meta">{{ p.author }} · {{ p.dynasty }}</small>
               </div>
               <RouterLink class="btn ghost" :to="`/poems/${p.id}`">详情</RouterLink>
+              <button class="btn" @click="store.toggleFavorite(p.id)">
+                {{ store.isFavorite(p.id) ? '取消收藏' : '收藏' }}
+              </button>
             </header>
             <p class="content">{{ p.content }}</p>
             <div v-if="p.tags?.length" class="tags">

@@ -2,7 +2,8 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePoemsStore, type Poem } from '../stores/poems'
-import { fetchComments, postComment } from '../api/comments'
+import { fetchComments, postComment, type Comment } from '../api/comments'
+import CommentItem from '../components/CommentItem.vue'
 
 const route = useRoute()
 const store = usePoemsStore()
@@ -12,15 +13,56 @@ const poem = ref<Poem | null>(null)
 type Comment = { id: number; author: string; content: string; likes?: number; time?: string }
 const comments = ref<Comment[]>([])
 const newComment = ref('')
+const replyingTo = ref<Comment | null>(null)
+
+/** 将扁平评论转为树状 */
+type CommentNode = Comment & { children?: CommentNode[] }
+function buildTree(items: Comment[]): CommentNode[] {
+  const map = new Map<number, CommentNode>()
+  const roots: CommentNode[] = []
+  for (const c of items) {
+    map.set(c.id, { ...c, children: [] })
+  }
+  for (const c of items) {
+    const node = map.get(c.id)!
+    const pid = c.parentId ?? null
+    if (pid && map.has(pid)) {
+      map.get(pid)!.children!.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+  return roots
+}
+const tree = ref<CommentNode[]>([])
+
+function setReplyTarget(c: Comment) {
+  replyingTo.value = c
+  // 给输入框加个 @ 引导，不强制
+  if (!newComment.value.startsWith('@')) {
+    newComment.value = `@${c.author} ` + newComment.value
+  }
+}
+function cancelReply() {
+  replyingTo.value = null
+}
 
 async function addComment() {
   const text = newComment.value.trim()
   if (!text) return
   try {
     const id = Number(route.params.id)
-    const created = await postComment({ poemId: id, author: '游客', content: text })
+    const created = await postComment({
+      poemId: id,
+      author: '游客',
+      content: text,
+      parentId: replyingTo.value?.id ?? null
+    })
+    // 将新评论插入本地列表并重建树
     comments.value.unshift(created)
+    tree.value = buildTree(comments.value)
     newComment.value = ''
+    replyingTo.value = null
   } catch (e) {
     console.error('post comment failed', e)
   }
@@ -39,6 +81,7 @@ onMounted(async () => {
     const id = Number(route.params.id)
     const res = await fetchComments({ poemId: id })
     comments.value = res.items ?? []
+    tree.value = buildTree(comments.value)
   } catch (e) {
     console.error('load comments failed', e)
   }
@@ -102,6 +145,12 @@ watch(() => route.params.id, load)
       <div class="card accent poem">
         <h1 class="title">{{ poem.title }}</h1>
         <p class="sub">—— {{ poem.author }} · {{ poem.dynasty }}</p>
+        <div class="poem-actions" style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+          <button class="btn" @click="store.toggleFavorite(poem.id)">
+            {{ store.isFavorite(poem.id) ? '取消收藏' : '收藏' }}
+          </button>
+          <RouterLink class="btn ghost" to="/favorites">查看收藏</RouterLink>
+        </div>
         <div class="poem-content">
           <p v-for="(line, idx) in poem.content.split('。').filter(Boolean)" :key="idx">{{ line }}。</p>
         </div>
@@ -124,26 +173,27 @@ watch(() => route.params.id, load)
       <!-- 评论区 -->
       <div class="card">
         <h3>鉴赏评论</h3>
+
+        <!-- 当前回复目标提示 -->
+        <div v-if="replyingTo" class="replying-tip">
+          正在回复：<strong>@{{ replyingTo.author }}</strong>
+          <button class="btn ghost" @click="cancelReply">取消</button>
+        </div>
+
         <div class="comment-editor">
           <div class="comment-avatar">人</div>
           <textarea v-model="newComment" rows="3" placeholder="发表你的观点..." />
           <button class="btn" @click="addComment">发表评论</button>
         </div>
+
+        <!-- 树状评论列表（递归渲染） -->
         <ul class="comment-list">
-          <li v-for="c in comments" :key="c.id" class="comment-item">
-            <div class="comment-head">
-              <div class="comment-avatar">人</div>
-              <div>
-                <strong>{{ c.author }}</strong>
-                <div class="muted">{{ c.time }}</div>
-              </div>
-            </div>
-            <p class="content">{{ c.content }}</p>
-            <div class="comment-actions">
-              <span class="muted">👍 {{ c.likes }}</span>
-              <RouterLink class="muted" to="/poems">回复</RouterLink>
-            </div>
-          </li>
+          <CommentItem
+            v-for="c in tree"
+            :key="c.id"
+            :node="c"
+            @reply="setReplyTarget"
+          />
         </ul>
       </div>
     </div>
@@ -155,7 +205,16 @@ watch(() => route.params.id, load)
   </section>
 </template>
 
+
+
 <style scoped>
+.replying-tip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; background: #fffdfa; border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: 8px;
+}
+.children { list-style: none; padding-left: 16px; margin-top: 8px; border-left: 2px dashed var(--border); }
+.link { background: transparent; border: none; color: var(--brand); cursor: pointer; padding: 0; }
 .menu { list-style: none; padding-left: 0; margin: 8px 0 0; }
 .menu li {
   padding: 6px 8px;
