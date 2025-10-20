@@ -14,6 +14,19 @@
         <button class="close" @click="open = false">×</button>
       </div>
 
+      <div class="presets">
+        <button
+          v-for="(q, i) in presets"
+          :key="i"
+          class="preset-chip"
+          type="button"
+          :disabled="loading"
+          @click="quickAsk(q)"
+          :title="q"
+        >
+          {{ q }}
+        </button>
+      </div>
       <div class="chat-body" ref="bodyEl">
         <div v-for="(m, i) in messages" :key="i" class="msg" :class="m.role">
           <div class="bubble">
@@ -47,6 +60,23 @@ const loading = ref(false)
 const messages = ref<ChatMessage[]>([
   { role: 'assistant', text: '你好，我是古诗词助手。你可以问我关于诗人、诗句、意境赏析等问题。' }
 ])
+
+const presets = ref<string[]>([
+  '推荐一首描写思乡的唐诗，并简述其意境与背景',
+  '李白与杜甫的诗风有何不同？请各举一例说明',
+  '解析《登鹳雀楼》“白日依山尽，黄河入海流”的艺术手法',
+  '以“春夜、雨、细柳”为意象，仿写两句近体诗',
+  '介绍王维的山水田园诗风格，并列出代表作与特点',
+  '“采菊东篱下，悠然见南山”表达了怎样的审美与人生观？',
+  '“大江东去，浪淘尽”出自何处？作者其人其事与创作背景',
+  '请推荐三首怀古伤今主题的诗词，并比较其情感差异'
+])
+
+function quickAsk(q: string) {
+  if (loading.value) return
+  input.value = q
+  send()
+}
 
 const bodyEl = ref<HTMLDivElement | null>(null)
 function scrollToBottom() {
@@ -150,6 +180,31 @@ onMounted(scrollToBottom)
   font-size: 18px;
   cursor: pointer;
 }
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e6e8ef;
+  background: #fff;
+}
+.preset-chip {
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid #e6e8ef;
+  background: #f7f9ff;
+  color: #2f5cff;
+  cursor: pointer;
+}
+.preset-chip:hover { background: #eef3ff; }
+.preset-chip:disabled { opacity: .6; cursor: not-allowed; }
 
 .chat-body {
   flex: 1;
