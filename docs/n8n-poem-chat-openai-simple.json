@@ -1,5 +1,5 @@
 {
-  "name": "Poem Chat Assistant (OpenAI Official)",
+  "name": "Poem Chat Assistant (Simple, OpenAI Node)",
   "nodes": [
     {
       "id": "Webhook_Entry",
@@ -47,48 +47,38 @@
             { "name": "Access-Control-Allow-Origin", "value": "={{$headers.origin}}" },
             { "name": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
             { "name": "Access-Control-Allow-Headers", "value": "content-type,authorization,apikey" },
-            { "name": "Access-Control-Allow-Credentials", "value": "true" },
-            { "name": "Access-Control-Max-Age", "value": "86400" },
             { "name": "Vary", "value": "Origin" }
           ]
         }
       }
     },
     {
-      "id": "HTTP_OpenAI",
-      "name": "HTTP Request (OpenAI Chat)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
+      "id": "OpenAI_Chat",
+      "name": "OpenAI (Chat)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 2,
       "position": [720, 300],
       "parameters": {
-        "url": "https://api.openai.com/v1/chat/completions",
-        "method": "POST",
-        "jsonParameters": true,
-        "options": {},
-        "headerParameters": {
-          "parameters": [
-            { "name": "Authorization", "value": "={{'Bearer ' + $env.OPENAI_API_KEY}}" },
-            { "name": "Content-Type", "value": "application/json" }
-          ]
-        },
-        "bodyParametersJson": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0.7,\n  \"max_tokens\": 512,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"你是古诗词助手。要求：\\n- 用简体中文回答\\n- 内容贴合诗词主题，尽量提供出处/作者（如果明确）\\n- 可做意境赏析、风格对比、名句解析\\n- 避免编造不存在的诗句，不确定则说明不确定\\n- 输出简洁清晰\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{$json.message}}\"\n    }\n  ]\n}"
-      }
-    },
-    {
-      "id": "Extract_Reply",
-      "name": "Extract Reply",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
-      "position": [960, 300],
-      "parameters": {
-        "keepOnlySet": true,
-        "values": {
-          "string": [
+        "operation": "chatCompletion",
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
             {
-              "name": "reply",
-              "value": "={{$json[\"choices\"][0][\"message\"][\"content\"] || $json.data || \"（未得到回复，请检查 OpenAI 输出）\"}}"
+              "role": "system",
+              "content": "你是古诗词助手。要求：\\n- 用简体中文回答\\n- 内容贴合诗词主题，尽量提供出处/作者（如果明确）\\n- 可做意境赏析、风格对比、名句解析\\n- 避免编造不存在的诗句，不确定则说明不确定\\n- 输出简洁清晰"
+            },
+            {
+              "role": "user",
+              "content": "={{$json.message}}"
             }
           ]
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "REPLACE_WITH_YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
         }
       }
     },
@@ -97,17 +87,15 @@
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1180, 300],
+      "position": [980, 300],
       "parameters": {
         "responseCode": 200,
-        "responseData": "={{$json}}",
+        "responseData": "={{ { reply: $json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content ? $json.choices[0].message.content : ($json.data || \"（未得到回复，请检查 OpenAI 输出）\") } }}",
         "responseHeaders": {
           "entries": [
             { "name": "Access-Control-Allow-Origin", "value": "={{$headers.origin}}" },
             { "name": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
             { "name": "Access-Control-Allow-Headers", "value": "content-type,authorization,apikey" },
-            { "name": "Access-Control-Allow-Credentials", "value": "true" },
-            { "name": "Access-Control-Expose-Headers", "value": "content-type" },
             { "name": "Vary", "value": "Origin" },
             { "name": "Content-Type", "value": "application/json" }
           ]
@@ -129,18 +117,11 @@
           { "node": "Respond CORS (OPTIONS)", "type": "main", "index": 0 }
         ],
         [
-          { "node": "HTTP Request (OpenAI Chat)", "type": "main", "index": 0 }
+          { "node": "OpenAI (Chat)", "type": "main", "index": 0 }
         ]
       ]
     },
-    "HTTP Request (OpenAI Chat)": {
-      "main": [
-        [
-          { "node": "Extract Reply", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Extract Reply": {
+    "OpenAI (Chat)": {
       "main": [
         [
           { "node": "Respond to Webhook", "type": "main", "index": 0 }
@@ -149,8 +130,8 @@
     }
   },
   "pinData": {},
-  "version": 2,
-  "meta": { "instanceId": "poem-chat-assistant-openai" },
+  "version": 1,
+  "meta": { "instanceId": "poem-chat-assistant-openai-simple" },
   "settings": {},
   "staticData": {}
 }
